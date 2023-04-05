@@ -53,8 +53,20 @@ public class EmployeeContorler {
             return R.error("账号已禁用");
         }
         //6.登录成功，将用户id存入Session中
-        request.getSession().setAttribute("id", emp.getId());
+        request.getSession().setAttribute("employee", emp.getId());
 
         return R.success(emp);
+    }
+
+
+    /**
+     * 员工退出
+     * @return
+     */
+    @PostMapping("logout")
+    public R<String> logout(HttpServletRequest request){
+        //清理session中保存的当前登录员工的id
+        request.getSession().removeAttribute("employee");
+        return R.success("退出成功");
     }
 }
