@@ -1,5 +1,7 @@
 package com.xiaou.reggie.filter;
 
+import com.alibaba.fastjson.JSON;
+import com.xiaou.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
 
@@ -28,6 +30,8 @@ public class LoginCheckFilter implements Filter {
         //1.获得本次请求的uri
         String requestURL = req.getRequestURI();
 
+
+        log.info("拦截到请求{}",requestURL);
         //定义不需要处理的请求路径
         String[] urls=new String[] {
                 "/employee/login",
@@ -39,10 +43,23 @@ public class LoginCheckFilter implements Filter {
         boolean check = check(urls, requestURL);
 
         //3.如果不需要处理，则直接放行
+        if (check) {
+            filterChain.doFilter(req,rsp);
+            log.info("本次请求{}不需要处理",requestURL);
+            return;
+        }
+        //4.判断登录状态，如果已登录，则直接放行
+        Object employee = req.getSession().getAttribute("employee");
 
+        if (employee!=null){
+            log.info("用户已经登录 用户ID为{}",req.getSession().getAttribute("employee"));
+            filterChain.doFilter(req, rsp);
+            return;
+        }
 
-        log.info("拦截到请求{}",req.getRequestURI());
-        filterChain.doFilter(req,rsp);
+        //5.如果未登录返回未登录的结果,通过输出流方式，向客户端页面响应数据
+        rsp.getWriter().write(JSON.toJSONString(R.error("NOTLOGIN")));
+        return;
     }
 
     /**
