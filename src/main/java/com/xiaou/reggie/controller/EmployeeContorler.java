@@ -88,9 +88,9 @@ public class EmployeeContorler {
 
         //设置初始密码为123456
         employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes()));
-
         //设置当前时间和修改时间
-        employee.setCreateTime(LocalDateTime.now());
+        /*
+       employee.setCreateTime(LocalDateTime.now());
         employee.setUpdateTime(LocalDateTime.now());
 
         //获得当前人的id
@@ -99,6 +99,7 @@ public class EmployeeContorler {
         employee.setCreateUser(empId);
         employee.setUpdateUser(empId);
 
+*/
         employeeService.save(employee);
 
         return R.success("新增员工成功");
@@ -131,10 +132,50 @@ public class EmployeeContorler {
         queryWrapper.orderByDesc(Employee::getUpdateTime);
 
         //执行查询
+
         employeeService.page(pageInfo,queryWrapper);
 
 
         return R.success(pageInfo);
+
+
     }
+
+    /**
+     * 根据我们的ID来修改员工信息
+     * @param employee
+     * @return
+     */
+    @PutMapping
+    public R<String> update(HttpServletRequest request ,@RequestBody Employee employee){
+
+        log.info(employee.toString());
+
+       employee.setUpdateTime(LocalDateTime.now());
+       employee.setUpdateUser((Long) request.getSession().getAttribute("employee"));
+
+        //根据id修改员工
+        employeeService.updateById(employee);
+
+        return R.success("员工信息修改成功");
+
+    }
+
+    /**
+     * 根据id查询员工信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public R<Employee> getById(@PathVariable Long id){
+
+        log.info("id={}", id);
+        Employee employee = employeeService.getById(id);
+        if (employee!=null){
+            return R.success(employee);
+        }
+        return R.error("没有查询到对应的员工");
+    }
+
 
 }
