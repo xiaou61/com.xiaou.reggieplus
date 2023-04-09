@@ -36,6 +36,17 @@ public class GolbalExceptionHandler {
     }
 
 
+    /**
+     * 自定义异常处理方法
+     * @return
+     */
+    @ExceptionHandler(CustomException.class)
+    public R<String> ExceptionHandler(CustomException ex) {
+        log.error(ex.getMessage());
+       return R.error(ex.getMessage());
+    }
+
+
 
 
 
