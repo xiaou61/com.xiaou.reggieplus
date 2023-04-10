@@ -5,10 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiaou.reggie.common.R;
 import com.xiaou.reggie.dto.DishDto;
 import com.xiaou.reggie.entity.*;
-import com.xiaou.reggie.service.CategoryService;
-import com.xiaou.reggie.service.DishFlavorService;
-import com.xiaou.reggie.service.DishService;
-import com.xiaou.reggie.service.SetmealDishService;
+import com.xiaou.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
@@ -37,7 +34,12 @@ public class DishController {
     @Autowired
     private CategoryService categoryService;
 
+
+    @Autowired
     private SetmealDishService setmealDishService;
+
+    @Autowired
+    private SetmealService setmealService;
 
     /**
      * 新增菜品
@@ -156,22 +158,83 @@ public class DishController {
     }
 
 
+//    /**
+//     *批量删除
+//     * @param ids
+//     * @return
+//     */
+//    @DeleteMapping
+//    public R<String> delete(@RequestParam("ids") List<Long> ids) {
+//        //删除菜品  这里的删除是逻辑删除
+//        dishService.deleteByIds(ids);
+//        //删除菜品对应的口味  也是逻辑删除
+//        LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
+//        queryWrapper.in(DishFlavor::getDishId, ids);
+//        dishFlavorService.remove(queryWrapper);
+//        return R.success("菜品删除成功");
+//    }
+
+
+
     /**
-     *批量删除
-     * @param ids
+     * 菜品批量删除和单个删除
+     * 1.判断要删除的菜品在不在售卖的套餐中，如果在那不能删除
+     * 2.要先判断要删除的菜品是否在售卖，如果在售卖也不能删除
      * @return
      */
+
+    //遇到一个小问题，添加菜品后，然后再添加套餐，但是套餐可选择添加的菜品选项是没有刚刚添加的菜品的？
+    //原因：redis存储的数据没有过期，不知道为什么redis没有重新刷新缓存
+    // （与DishController中的@GetMapping("/list")中的缓存设置有关，目前不知道咋配置刷新缓存。。。。。
+    // 解决方案，把redis中的数据手动的重新加载一遍，或者是等待缓存过期后再添加相关的套餐，或者改造成使用spring catch
     @DeleteMapping
-    public R<String> delete(@RequestParam("ids") List<Long> ids) {
-        //删除菜品  这里的删除是逻辑删除
+    public R<String> delete(@RequestParam("ids") List<Long> ids){
+        //根据菜品id在stemeal_dish表中查出哪些套餐包含该菜品
+        LambdaQueryWrapper<SetmealDish> setmealDishLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        setmealDishLambdaQueryWrapper.in(SetmealDish::getDishId,ids);
+        List<SetmealDish> SetmealDishList = setmealDishService.list(setmealDishLambdaQueryWrapper);
+        //如果菜品没有关联套餐，直接删除就行  其实下面这个逻辑可以抽离出来，这里我就不抽离了
+        if (SetmealDishList.size() == 0){
+            //这个deleteByIds中已经做了菜品起售不能删除的判断力
+            dishService.deleteByIds(ids);
+            LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.in(DishFlavor::getDishId,ids);
+            dishFlavorService.remove(queryWrapper);
+            return R.success("菜品删除成功");
+        }
+
+        //如果菜品有关联套餐，并且该套餐正在售卖，那么不能删除
+        //得到与删除菜品关联的套餐id
+        ArrayList<Long> Setmeal_idList = new ArrayList<>();
+        for (SetmealDish setmealDish : SetmealDishList) {
+            Long setmealId = setmealDish.getSetmealId();
+            Setmeal_idList.add(setmealId);
+        }
+        //查询出与删除菜品相关联的套餐
+        LambdaQueryWrapper<Setmeal> setmealLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        setmealLambdaQueryWrapper.in(Setmeal::getId,Setmeal_idList);
+        List<Setmeal> setmealList = setmealService.list(setmealLambdaQueryWrapper);
+        //对拿到的所有套餐进行遍历，然后拿到套餐的售卖状态，如果有套餐正在售卖那么删除失败
+        for (Setmeal setmeal : setmealList) {
+            Integer status = setmeal.getStatus();
+            if (status == 1){
+                return R.error("删除的菜品中有关联在售套餐,删除失败！");
+            }
+        }
+
+        //要删除的菜品关联的套餐没有在售，可以删除
+        //这下面的代码并不一定会执行,因为如果前面的for循环中出现status == 1,那么下面的代码就不会再执行
         dishService.deleteByIds(ids);
-        //删除菜品对应的口味  也是逻辑删除
         LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(DishFlavor::getDishId, ids);
+        queryWrapper.in(DishFlavor::getDishId,ids);
         dishFlavorService.remove(queryWrapper);
         return R.success("菜品删除成功");
     }
 
 
+    public R<List<Dish>> list(Dish dish){
+
+        return null;
+    }
 }
 
