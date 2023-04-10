@@ -75,14 +75,12 @@ public class CommonController {
             FileInputStream fis=new FileInputStream(new File(basePath+name));
             //输出流，通过输出流将文件回浏览器，在浏览器展示图片
             ServletOutputStream outputStream=response.getOutputStream();
-
-
             //图片文件
             response.setContentType("image/jpeg");
 
             int len=0;
-            byte[] bytes = new byte[1024];
-            while ((len=fis.read(bytes))!=1){
+            byte[] bytes = new byte[2048];
+            while ((len=fis.read(bytes))!=-1){
                 outputStream.write(bytes, 0, len);
                 outputStream.flush();
             }
