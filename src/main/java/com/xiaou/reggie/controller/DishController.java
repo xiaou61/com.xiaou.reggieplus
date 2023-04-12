@@ -7,8 +7,6 @@ import com.xiaou.reggie.dto.DishDto;
 import com.xiaou.reggie.entity.*;
 import com.xiaou.reggie.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Update;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -232,9 +230,29 @@ public class DishController {
     }
 
 
+    /**
+     * 根据查询条件查询菜品数据
+     * @param dish
+     * @return
+     */
+    @GetMapping("/list")
     public R<List<Dish>> list(Dish dish){
 
-        return null;
+        //构造查询条件
+        LambdaQueryWrapper<Dish> queryWrapper=new LambdaQueryWrapper<>();
+    
+
+        queryWrapper.eq(dish.getCategoryId()!=null,Dish::getCategoryId,dish.getCategoryId());
+
+        //添加条件，查询状态为1(表示起售的菜品)
+        queryWrapper.eq(Dish::getStatus,1);
+        //添加排序条件
+        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
+
+        List<Dish> list = dishService.list(queryWrapper);
+
+        return R.success(list);
+
     }
 }
 
