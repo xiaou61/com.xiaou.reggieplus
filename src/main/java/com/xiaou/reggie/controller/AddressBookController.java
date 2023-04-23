@@ -102,4 +102,39 @@ public class AddressBookController {
         //SQL:select * from address_book where user_id = ? order by update_time desc
         return R.success(addressBookService.list(queryWrapper));
     }
+
+    /**
+     * 根据地址id删除用户地址
+     * @param id
+     * @return
+     */
+    @DeleteMapping
+    public R<String> delete(@RequestParam("ids") Long id){
+
+        if (id == null){
+            return R.error("请求异常");
+        }
+        LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressBook::getId,id).eq(AddressBook::getUserId,BaseContext.getCurrentId());
+        addressBookService.remove(queryWrapper);
+        //addressBookService.removeById(id);  感觉直接使用这个removeById不太严谨.....
+        return R.success("删除地址成功");
+    }
+    /**
+     * 修改收货地址
+     * @param addressBook
+     * @return
+     */
+    @PutMapping
+    public R<String> update(@RequestBody AddressBook addressBook){
+
+        if (addressBook == null){
+            return R.error("请求异常");
+        }
+        addressBookService.updateById(addressBook);
+
+        return R.success("修改成功");
+    }
+
+
 }
